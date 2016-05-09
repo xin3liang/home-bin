@@ -1,6 +1,6 @@
 #!/bin/bash                                                                                                                                                                        
 KERNEL_OUT=~/work/kernel/out
-BUILD_TARGET="Image hisilicon/hip05-d02.dtb hisilicon/hip06-d03.dtb"
+BUILD_TARGET="hisilicon/hip05-d02.dtb hisilicon/hip06-d03.dtb"
 CROSS_TOOLCHAIN=aarch64-linux-gnu-
 
 #set -x

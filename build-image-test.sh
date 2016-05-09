@@ -1,16 +1,16 @@
 #!/bin/bash                                                                                                                                                                        
 KERNEL_OUT=~/work/kernel/out
-BUILD_TARGET="Image hisilicon/hip05-d02.dtb hisilicon/hip06-d03.dtb"
+BUILD_TARGET="Image modules"
 CROSS_TOOLCHAIN=aarch64-linux-gnu-
 
-#set -x
+set -x
 
 make -p ${KERNEL_OUT} &&
 make mrproper &&
 
 ## build kernel testing
-make ARCH=arm64 O=${KERNEL_OUT} defconfig &&
+make ARCH=arm64 O=${KERNEL_OUT} allmodconfig &&
 make ARCH=arm64 CROSS_COMPILE=$CROSS_TOOLCHAIN O=${KERNEL_OUT} \
-${BUILD_TARGET} -j40 
+${BUILD_TARGET} -j64 
 
-#set +x
+set +x
