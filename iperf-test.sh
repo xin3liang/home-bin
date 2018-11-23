@@ -91,4 +91,4 @@ while [ $process -gt 0 ]; do
 done
 
 wait
-echo "Finish test."
+echo "Finish test. run $ iperf3 -p $port $run_mode $time $thread $extra_opt & "
