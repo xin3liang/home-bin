@@ -106,6 +106,7 @@ do
     esac
 
     shift
+    ${ac_shift}
 done
 
 if [ x"$DOMAIN" = x""  ]; then
