@@ -76,7 +76,7 @@ fi
 
 while [ $process -gt 0 ]; do
 
-        iperf -p $port $run_mode $time $thread $extra_opt & 
+        iperf3 -p $port $run_mode $time $thread $extra_opt & 
 
 	if [[ $send_mode = "mix" ]]; then
 		if [[ -z $extra_opt ]]; then
