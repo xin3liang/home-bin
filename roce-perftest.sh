@@ -2,14 +2,16 @@
 
 set -ex
 
-testParam="send read write atomic"
+testParam="send read write" # atomic not support yet for D06
 testCount=10
 
 
 ## params
-case $1 in
-*) testParam=$@ ;;
+if [ $# -ge 1 ]; then
+	case $1 in
+	*) testParam=$@ ;;
 esac
+fi
 
 for opt in ${testParam}
 do
