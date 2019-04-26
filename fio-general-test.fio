@@ -9,8 +9,8 @@
 
 [global]
 ramp_time=10
-runtime=60
-size=10g
+runtime=43200
+#size=10g
 ioengine=libaio
 iodepth=4
 #numjobs=$ncpus
@@ -21,65 +21,55 @@ bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 direct=1
 rw=randread
-numjobs=5
 
 [range4k-4m_randread]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=randread
-numjobs=5
 
 [range4k-4m_read_write_direct]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 direct=1
 rw=randrw
-numjobs=5
 
 [range4k-4m_read_write]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=randrw
-numjobs=5
 
 [range4k-4m_randwrite_direct]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 direct=1
 rw=randwrite
-numjobs=5
 
 [range4k-4m_randwrite]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=randwrite
-numjobs=5
 
 [range4k-4m_read_direct]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=read
 direct=1
-numjobs=5
 
 [range4k-4m_read]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=read
-numjobs=5
 
 [range4k-4m_write_direct]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 direct=1
 rw=write
-numjobs=5
 
 [range4k-4m_write]
 bsrange=4k-4m
 bssplit=4k/20:8k/20:64k/20:1m/20:4m/20
 rw=write
-numjobs=5
 
 #####################
 [4k_rand_read_direct]
