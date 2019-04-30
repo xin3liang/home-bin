@@ -2,7 +2,7 @@
 
 set -ex
 
-testParam="send read write" # atomic not support yet for D06
+testParam="send read write atomic" # atomic not support yet for D06
 testCount=10
 
 
@@ -13,15 +13,17 @@ if [ $# -ge 1 ]; then
 esac
 fi
 
-for opt in ${testParam}
-do
-	count=1
-	while [ $count -le $testCount ]
+while true; do
+	for opt in ${testParam}
 	do
-		echo "$count: ib_${opt}_bw test =========================================================>"
-                ib_${opt}_bw -d hns_0 &
-                ib_${opt}_bw -d hns_0 localhost
-		(( count++ ))
+		count=1
+		while [ $count -le $testCount ]
+		do
+			echo "$count: ib_${opt}_bw test =========================================================>"
+			ib_${opt}_bw -d hns_1 &
+			ib_${opt}_bw -d hns_1 localhost
+			(( count++ ))
+		done
 	done
 done
 
