@@ -1,0 +1,1 @@
+/home/liuxl/sailing/redhat/scripts/add_info.sh
