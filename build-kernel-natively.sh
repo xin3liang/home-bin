@@ -14,7 +14,7 @@ cpunum=$(getconf _NPROCESSORS_ONLN)
 #cpunum=1
 
 # targets: bindeb-pkg binrpm-pkg INSTALL_MOD_STRIP=1 Image modules INSTALL_MOD_PATH=${OUT} modules_install"
-BUILD_TARGETS="binrpm-pkg INSTALL_MOD_STRIP=1" 
+BUILD_TARGETS="rpm-pkg INSTALL_MOD_STRIP=1"
 
 ## kernel .config compile
 # cp /boot/conf-xx kernel_source_dir/.config
