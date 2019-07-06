@@ -28,7 +28,7 @@ do
 	patchfile="$tmpdir/$(printf "%04d.patch" "$i")"
 	git format-patch -1 $patch --stdout > $patchfile
 	insert_info $patchfile
-	git am -s $patchfile
+	git am -s -3 $patchfile
 	(( i= i+1 ))
 done
 
