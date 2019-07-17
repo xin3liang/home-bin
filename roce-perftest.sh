@@ -20,8 +20,10 @@ while true; do
 		while [ $count -le $testCount ]
 		do
 			echo "$count: ib_${opt}_bw test =========================================================>"
-			ib_${opt}_bw -d hns_1 &
-			ib_${opt}_bw -d hns_1 localhost
+			ib_${opt}_bw -d hns_2 &
+			sleep 0.1s
+			ib_${opt}_bw -d hns_2 localhost
+			wait
 			(( count++ ))
 		done
 	done

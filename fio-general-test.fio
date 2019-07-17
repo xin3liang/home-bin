@@ -14,7 +14,7 @@ runtime=43200
 ioengine=libaio
 iodepth=4
 #numjobs=$ncpus
-filename=/dev/sdz
+filename=/dev/nvme0n1
 
 [range1k-4m_randread_direct]
 bsrange=1k-4m
