@@ -69,7 +69,7 @@ while read server_info; do
     bmc_user=$(echo $server_info|awk '{print $4}')
     bmc_passwd=$(echo $server_info|awk '{print $5}')
     boot_option=$(echo $server_info|awk '{print $6}')
-    node_name=${model,,}-${server_count}
+    node_name=${model,,}-$(printf "%02d" $server_count)
     connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
     cpus=$(get_cpus $model)
 
