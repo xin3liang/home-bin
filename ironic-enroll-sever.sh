@@ -1,11 +1,13 @@
 #!/bin/bash -e
 
 # An input file should contain bellow format lines.
-# <Model> <MAC address> <BMC IP address> <BMC username> <BMC password> <Boot option>
+# <Model> <MAC address> <BMC IP address> <BMC username> <BMC password> <Boot option> [<Root disk hint> <Root disk hint value>]
 # Where
 # <Model> is the server production name, e.g.: D05/THX1/THX2
 # <MAC address> is the provision interface's MAC.
 # <Boot option> is 'local' for local disk boot or 'netboot' for iscsi volume boot
+# [<Root disk hint> <Root disk hint value>] For loca disk boot,
+# see https://docs.openstack.org/ironic/latest/install/advanced.html#specifying-the-disk-for-deployment-root-device-hints
 
 
 D05_CPUS=64
@@ -69,6 +71,8 @@ while read server_info; do
     bmc_user=$(echo $server_info|awk '{print $4}')
     bmc_passwd=$(echo $server_info|awk '{print $5}')
     boot_option=$(echo $server_info|awk '{print $6}')
+    root_disk_hint=$(echo $server_info|awk '{print $7}')
+    root_disk_hint_value=$(echo $server_info|awk '{print $8}')
     node_name=${model,,}-$(printf "%02d" $server_count)
     connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
     cpus=$(get_cpus $model)
@@ -105,6 +109,11 @@ while read server_info; do
                         -f value -c id)
     resource_class=${RESOURCE_CLASS,,}-${model,,}
 
+    extra_opts=""
+    if [[ -n $root_disk_hint ]]; then
+	    extra_opts+=" --property root_device={"$root_disk_hint": "$root_disk_hint_value"}"
+    fi
+
     # Note: Set capabilities=boot_option:local if it has disk for local disk boot
     # and only one boot_option could be set once time.
     node_id=$(openstack baremetal node create \
@@ -122,7 +131,7 @@ while read server_info; do
         --property capabilities="boot_mode:uefi,iscsi_boot:True,boot_option:$boot_option" \
         --storage-interface cinder \
         --deploy-interface iscsi \
-        -f value -c uuid)
+        -f value -c uuid $extra_opts)
     
     openstack baremetal port create $mac_addr --node $node_id
     #--physical-network physnet1
