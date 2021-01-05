@@ -9,6 +9,8 @@
 # <Boot option> is 'local' for local disk boot or 'netboot' for iscsi volume boot
 # [<Root disk hint> <Root disk hint value>] For loca disk boot,
 # see https://docs.openstack.org/ironic/latest/install/advanced.html#specifying-the-disk-for-deployment-root-device-hints
+# Example line:  
+# D05 rack3-d05-02 a0:a3:3b:c1:41:b9 172.27.64.50 root Huawei12#$ netboot
 
 
 D05_CPUS=64
@@ -38,9 +40,9 @@ fail_ips=""
 
 echo "Check BMC connectivity..."
 while read server_info; do
-    bmc_ip=$(echo $server_info|awk '{print $3}')
-    bmc_user=$(echo $server_info|awk '{print $4}')
-    bmc_passwd=$(echo $server_info|awk '{print $5}')
+    bmc_ip=$(echo $server_info|awk '{print $4}')
+    bmc_user=$(echo $server_info|awk '{print $5}')
+    bmc_passwd=$(echo $server_info|awk '{print $6}')
 
     ret=0
     ipmitool -I lanplus -H $bmc_ip  -U $bmc_user -P $bmc_passwd  power status || ret=1
