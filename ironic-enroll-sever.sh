@@ -1,16 +1,17 @@
 #!/bin/bash -e
 
 # An input file should contain bellow format lines.
-# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> <Boot option>
+# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> <Boot option> [<Root disk hint> <Root disk hint value>]
 # Where
 # <Model> is the server production name, e.g.: D05/THX1/THX2
 # <Name> can be 'auto' or a specific name e.g. "racke-d05-01"
 # <MAC address> is the provision interface's MAC.
 # <Boot option> is 'local' for local disk boot or 'netboot' for iscsi volume boot
-# [<Root disk hint> <Root disk hint value>] For loca disk boot,
+# [<Root disk hint> <Root disk hint value>] For specify local disk to install OS
 # see https://docs.openstack.org/ironic/latest/install/advanced.html#specifying-the-disk-for-deployment-root-device-hints
-# Example line:  
+# Example lines:
 # D05 rack3-d05-02 a0:a3:3b:c1:41:b9 172.27.64.50 root Huawei12#$ netboot
+# THX1 rack3-thx1-02 a0:a3:3b:c1:41:b9 172.27.64.51 root Huawei12#$ local serial 160811E5163F
 
 
 D05_CPUS=64
@@ -118,8 +119,8 @@ while read server_info; do
     resource_class=${RESOURCE_CLASS,,}-${model,,}
 
     extra_opts=""
-    if [[ -n $root_disk_hint ]]; then
-	    echo   extra_opts+=" --property root_device={"$root_disk_hint": "$root_disk_hint_value"}"
+    if [[ -n $root_disk_hint && "$boot_option" == "local" ]]; then
+	    extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
     fi
 
     # Note: Set capabilities=boot_option:local if it has disk for local disk boot
