@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # An input file should contains bellow format lines.
-# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> <Boot option> [<Root disk hint> <Root disk hint value>]
+# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> [Target address] <Boot option> [<Root disk hint> <Root disk hint value>]
 #
 # Where
 # <Model> is the server production name, e.g.: D05/THX1/THX2
@@ -10,6 +10,8 @@
 #
 # <MAC address> is the provision interface's MAC.
 #
+# [Target address] for multi-node machine, e.g. FX700
+#
 # <Boot option> is 'local' for local disk boot or 'netboot' for iscsi volume boot
 #
 # [<Root disk hint> <Root disk hint value>] For specify a local disk to install OS
@@ -17,43 +19,54 @@
 # Use lsblk to get related hint, e.g. lsblk -o SERIAL,NAME,SIZE, lsblk -h for more info.
 #
 # Example lines:
-# D05 rack3-d05-02 a0:a3:3b:c1:41:b9 172.27.64.50 root Huawei12#$ netboot
+# D05 auto a0:a3:3b:c1:41:b9 172.27.64.50 root Huawei12#$ netboot
 # THX1 rack3-thx1-02 a0:a3:3b:c1:41:b9 172.27.64.51 root Huawei12#$ local serial 160811E5163F
+# FX700 rack4-fx700-node2 2C:D4:44:CE:90:A2 172.27.64.160 hpcmainte HPCMAINTE 0x34 netboot
 
 
-D05_CPUS=64
-THX1_CPUS=48
-THX2_CPUS=128
 RAM_MB=32768 #default RAM 32G
 DISK_GB=10 # default root disk 10G
 RESOURCE_CLASS=baremetal
 
 function get_cpus 
 {
-    if [[ ${1,,} = "d05" ]]; then
-        echo $D05_CPUS
-    elif [[ ${1,,} = "thx1" ]]; then
-        echo $THX1_CPUS
-    elif [[ ${1,,} = "thx2" ]]; then
-        echo $THX2_CPUS
-    else
-        echo 0
-    fi
+    model=${1,,}
+    case $model in
+        thx1 | fx700)
+	    cpus=48
+	    ;;
+        d05)
+	    cpus=64
+	    ;;
+        thx2)
+	    cpus=128
+	    ;;
+	*)
+	    cpus=0
+	    ;;
+    esac
+
+    echo $cpus
 }
 
+echo "Check BMC connectivity..."
 server_info_file=$1
 server_count=1
 fail_count=0
 fail_ips=""
-
-echo "Check BMC connectivity..."
 while read server_info; do
+    model=$(echo $server_info|awk '{print $1}')
     bmc_ip=$(echo $server_info|awk '{print $4}')
     bmc_user=$(echo $server_info|awk '{print $5}')
     bmc_passwd=$(echo $server_info|awk '{print $6}')
+    extra_opts=""
+    if [[ "${model,,}" = "fx700" ]]; then
+	target_addr=$(echo $server_info|awk '{print $7}')
+	extra_opts+=" -L USER -t $target_addr"
+    fi
 
     ret=0
-    ipmitool -I lanplus -H $bmc_ip  -U $bmc_user -P $bmc_passwd  power status || ret=1
+    ipmitool -I lanplus -H $bmc_ip  -U $bmc_user -P $bmc_passwd $extra_opts  power status || ret=1
     if [[ "$ret" = 0 ]]; then
 	echo "$bmc_ip ok"
     else
@@ -82,9 +95,24 @@ while read server_info; do
     bmc_ip=$(echo $server_info|awk '{print $4}')
     bmc_user=$(echo $server_info|awk '{print $5}')
     bmc_passwd=$(echo $server_info|awk '{print $6}')
-    boot_option=$(echo $server_info|awk '{print $7}')
-    root_disk_hint=$(echo $server_info|awk '{print $8}')
-    root_disk_hint_value=$(echo $server_info|awk '{print $9}')
+
+    i=0
+    extra_opts=""
+    if [[ "${model,,}" = "fx700" ]]; then
+        target_addr=$(echo $server_info|awk '{print $7}')
+	extra_opts+=" \
+		--management-interface noop \
+		--driver-info ipmi_priv_level=USER \
+		--driver-info ipmi_bridging=single \
+		--driver-info ipmi_target_channel=0 \
+		--driver-info ipmi_target_address=$target_addr"
+	((i+=1))
+    fi
+
+    boot_option=$(echo $server_info|awk -v i=$i '{print $(7+i)}')
+    root_disk_hint=$(echo $server_info|awk -v i=$i '{print $(8+i)}')
+    root_disk_hint_value=$(echo $server_info|awk -v i=$i '{print $(9+i)}')
+
     if [[ "$name" == "auto" ]]; then
         node_name=${model,,}-$(printf "%02d" $server_count)
     else
@@ -125,7 +153,6 @@ while read server_info; do
                         -f value -c id)
     resource_class=${RESOURCE_CLASS,,}-${model,,}
 
-    extra_opts=""
     if [[ -n $root_disk_hint && "$boot_option" == "local" ]]; then
 	    extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
     fi
