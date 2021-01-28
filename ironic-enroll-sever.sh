@@ -118,7 +118,6 @@ while read server_info; do
     else
         node_name=$name
     fi
-    connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
     cpus=$(get_cpus $model)
 
     # if flavor not existed, 
@@ -157,6 +156,8 @@ while read server_info; do
 	    extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
     fi
 
+    cap_prop="boot_mode:uefi,boot_option:$boot_option"
+
     # Note: Set capabilities=boot_option:local if it has disk for local disk boot
     # and only one boot_option could be set once time.
     node_id=$(openstack baremetal node create \
@@ -171,17 +172,22 @@ while read server_info; do
         --property cpu_arch=aarch64 \
         --property cpus=$cpus \
         --property memory_mb=$RAM_MB \
-        --property capabilities="boot_mode:uefi,iscsi_boot:True,boot_option:$boot_option" \
+        --property capabilities=$cap_prop \
         --storage-interface cinder \
         --deploy-interface iscsi \
         -f value -c uuid $extra_opts)
     
     openstack baremetal port create $mac_addr --node $node_id --physical-network physnet1
 
-    # create initiator
-    openstack baremetal volume connector create \
-        --node $node_id --type iqn \
-        --connector-id $connector_iqn
+    if [[ "$boot_option" == "netboot" ]];then
+	cap_prop+=",iscsi_boot:True"
+        openstack baremetal node set $node_id --property capabilities=$cap_prop
+        # create initiator
+        connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
+	openstack baremetal volume connector create \
+		--node $node_id --type iqn \
+		--connector-id $connector_iqn
+    fi
     
     openstack baremetal node manage $node_id
     openstack baremetal node provide $node_id
