@@ -12,6 +12,6 @@ fi
 
 find -L $(pwd)/$DIR -type f \( ! -path "*test*" ! -path "*/.tox/*" ! -path "*/.git/*" -name "*.py"  \) > pycscope.files
 pycscope -i pycscope.files
-
+rm -f pycscope.files
 set +x
 
