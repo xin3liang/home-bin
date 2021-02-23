@@ -100,13 +100,17 @@ while read server_info; do
     extra_opts=""
     if [[ "${model,,}" = "fx700" ]]; then
         target_addr=$(echo $server_info|awk '{print $7}')
-	extra_opts+=" \
-		--management-interface noop \
-		--driver-info ipmi_priv_level=USER \
-		--driver-info ipmi_bridging=single \
-		--driver-info ipmi_target_channel=0 \
-		--driver-info ipmi_target_address=$target_addr"
-	((i+=1))
+        extra_opts+=" \
+            --driver fx-ipmi \
+            --driver-info ipmi_priv_level=USER \
+            --driver-info ipmi_bridging=single \
+            --driver-info ipmi_target_channel=0 \
+            --driver-info ipmi_target_address=$target_addr"
+	    ((i+=1))
+    else
+        extra_opts+=" \
+            --driver ipmi"
+
     fi
 
     boot_option=$(echo $server_info|awk -v i=$i '{print $(7+i)}')
@@ -162,7 +166,6 @@ while read server_info; do
     # and only one boot_option could be set once time.
     node_id=$(openstack baremetal node create \
         --name $node_name \
-        --driver ipmi \
         --driver-info ipmi_username=$bmc_user \
         --driver-info ipmi_password=$bmc_passwd \
         --driver-info ipmi_address=$bmc_ip \
@@ -173,7 +176,6 @@ while read server_info; do
         --property cpus=$cpus \
         --property memory_mb=$RAM_MB \
         --property capabilities=$cap_prop \
-        --storage-interface cinder \
         --deploy-interface iscsi \
         -f value -c uuid $extra_opts)
     
@@ -181,7 +183,9 @@ while read server_info; do
 
     if [[ "$boot_option" == "netboot" ]];then
 	cap_prop+=",iscsi_boot:True"
-        openstack baremetal node set $node_id --property capabilities=$cap_prop
+        openstack baremetal node set $node_id \
+            --storage-interface cinder \
+            --property capabilities=$cap_prop
         # create initiator
         connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
 	openstack baremetal volume connector create \
