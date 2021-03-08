@@ -59,14 +59,14 @@ while read server_info; do
     bmc_ip=$(echo $server_info|awk '{print $4}')
     bmc_user=$(echo $server_info|awk '{print $5}')
     bmc_passwd=$(echo $server_info|awk '{print $6}')
-    extra_opts=""
+    bmc_extra_opts=""
     if [[ "${model,,}" = "fx700" ]]; then
-	target_addr=$(echo $server_info|awk '{print $7}')
-	extra_opts+=" -L USER -t $target_addr"
+        target_addr=$(echo $server_info|awk '{print $7}')
+        bmc_extra_opts+=" -L USER -t $target_addr"
     fi
 
     ret=0
-    ipmitool -I lanplus -H $bmc_ip  -U $bmc_user -P $bmc_passwd $extra_opts  power status || ret=1
+    ipmitool -I lanplus -H $bmc_ip  -U $bmc_user -P $bmc_passwd $bmc_extra_opts  power status || ret=1
     if [[ "$ret" = 0 ]]; then
 	echo "$bmc_ip ok"
     else
@@ -97,10 +97,10 @@ while read server_info; do
     bmc_passwd=$(echo $server_info|awk '{print $6}')
 
     i=0
-    extra_opts=""
+    node_opts=""
     if [[ "${model,,}" = "fx700" ]]; then
         target_addr=$(echo $server_info|awk '{print $7}')
-        extra_opts+=" \
+        node_opts+=" \
             --driver fx-ipmi \
             --driver-info ipmi_priv_level=USER \
             --driver-info ipmi_bridging=single \
@@ -108,7 +108,7 @@ while read server_info; do
             --driver-info ipmi_target_address=$target_addr"
 	    ((i+=1))
     else
-        extra_opts+=" \
+        node_opts+=" \
             --driver ipmi"
 
     fi
@@ -156,10 +156,6 @@ while read server_info; do
                         -f value -c id)
     resource_class=${RESOURCE_CLASS,,}-${model,,}
 
-    if [[ -n $root_disk_hint && "$boot_option" == "local" ]]; then
-	    extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
-    fi
-
     cap_prop="boot_mode:uefi,boot_option:$boot_option"
 
     # Note: Set capabilities=boot_option:local if it has disk for local disk boot
@@ -177,22 +173,36 @@ while read server_info; do
         --property memory_mb=$RAM_MB \
         --property capabilities=$cap_prop \
         --deploy-interface iscsi \
-        -f value -c uuid $extra_opts)
+        -f value -c uuid $node_opts)
     
     openstack baremetal port create $mac_addr --node $node_id --physical-network physnet1
 
+    node_extra_opts=""
     if [[ "$boot_option" == "netboot" ]];then
-	cap_prop+=",iscsi_boot:True"
-        openstack baremetal node set $node_id \
+	    cap_prop+=",iscsi_boot:True"
+        node_extra_opts+=" \
+            --network-interface flat \
             --storage-interface cinder \
-            --property capabilities=$cap_prop
+            --property capabilities=$cap_prop"
         # create initiator
         connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
-	openstack baremetal volume connector create \
-		--node $node_id --type iqn \
-		--connector-id $connector_iqn
+        openstack baremetal volume connector create \
+            --node $node_id --type iqn \
+            --connector-id $connector_iqn
+    elif [[ "$boot_option" == "local" ]];then
+        node_extra_opts+=" \
+            --network-interface neutron"
+        if [[ -n $root_disk_hint ]]; then
+            node_extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
+        fi
+        # TODO: Add port local-link-connection
+        echo "Please add local-link-connection for node $node_name manually!!"
+    else
+        echo "Wrong boot_option: $boot_option!! Deleting node $node_name. "
+        openstack baremetal node delete  $node_id
     fi
-    
+
+    openstack baremetal node set $node_id $node_extra_opts
     openstack baremetal node manage $node_id
     openstack baremetal node provide $node_id
 
