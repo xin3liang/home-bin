@@ -133,7 +133,7 @@ while read server_info; do
 	volume_boot_flavor_name=${flavor_name_prefix}.volume-boot
 	local_boot_flavor_name=${flavor_name_prefix}.local-boot
         openstack flavor create --ram 1 --vcpus 1 \
-            --disk $DISK_GB  $volume_boot_flavor_name
+            --disk $DISK_GB --private $volume_boot_flavor_name
         openstack flavor set $volume_boot_flavor_name \
             --property resources:$resource_class=1 \
             --property resources:VCPU=0 \
@@ -141,7 +141,7 @@ while read server_info; do
             --property resources:DISK_GB=0 \
             --property capabilities:boot_option='netboot'
         openstack flavor create --ram 1 --vcpus 1 \
-            --disk $DISK_GB  $local_boot_flavor_name
+            --disk $DISK_GB --private $local_boot_flavor_name
         openstack flavor set $local_boot_flavor_name \
             --property resources:$resource_class=1 \
             --property resources:VCPU=0 \
