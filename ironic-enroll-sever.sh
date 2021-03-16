@@ -127,7 +127,7 @@ while read server_info; do
     # if flavor not existed, 
     # then create it
     flavor_name_prefix=bm.${model,,}
-    flavor=$(openstack flavor list|grep -i $flavor_name_prefix) || true
+    flavor=$(openstack flavor list --all|grep -i $flavor_name_prefix) || true
     if [[ -z $flavor ]]; then
         resource_class=CUSTOM_${RESOURCE_CLASS^^}_${model^^}
 	volume_boot_flavor_name=${flavor_name_prefix}.volume-boot
