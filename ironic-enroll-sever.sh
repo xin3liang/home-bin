@@ -191,12 +191,12 @@ while read server_info; do
             --connector-id $connector_iqn
     elif [[ "$boot_option" == "local" ]];then
         node_extra_opts+=" \
-            --network-interface neutron"
+            --network-interface flat"
         if [[ -n $root_disk_hint ]]; then
             node_extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
         fi
         # TODO: Add port local-link-connection
-        echo "Please add local-link-connection for node $node_name manually!!"
+        #echo "Please add local-link-connection for node $node_name manually!!"
     else
         echo "Wrong boot_option: $boot_option!! Deleting node $node_name. "
         openstack baremetal node delete  $node_id
