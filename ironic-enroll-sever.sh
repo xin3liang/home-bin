@@ -25,7 +25,7 @@
 
 
 RAM_MB=32768 #default RAM 32G
-DISK_GB=10 # default root disk 10G
+DISK_GB=80 # default root disk 80G
 RESOURCE_CLASS=baremetal
 
 function get_cpus 
