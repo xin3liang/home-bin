@@ -34,5 +34,5 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
-          echo $(date) >> tmp.txt
-          cat tmp.txt
+          echo $(date) >> ../tmp.txt
+          cat ../tmp.txt
