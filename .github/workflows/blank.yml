@@ -17,8 +17,8 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
-    runs-on: [self-hosted, ubuntu-20.04, ARM64]
+    # The type of runner that the job will run on #[self-hosted, ubuntu-20.04, ARM64]
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -34,5 +34,6 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
-          echo $(date) >> ../tmp.txt
-          cat ../tmp.txt
+          ip a
+          lsb_release -a
+          uname -a
