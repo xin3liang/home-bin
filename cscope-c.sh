@@ -12,7 +12,8 @@ fi
 
 ctags -R $DIR
 
-find $(pwd)/$DIR -type f \( -name "*.[ch]" -o -name "*.cpp" -o -name "*.cc" \
+find $(pwd)/$DIR -type f \( -name "*.[ch]" -o -name "*.cpp" \
+    -o -name "*.hh" -o -name "*.cc" \
     ! -path "*test*" ! -path "*/.git/*" \) > cscope.files
 cscope -bkq -i cscope.files
 rm -f cscope.files
