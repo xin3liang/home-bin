@@ -10,7 +10,7 @@ if [ -n "$1" ] ;then
 	DIR=$1
 fi
 
-rusty-tags vi
+rusty-tags -v vi
 ctags -R $DIR
 
 find . -name "*.rs" -print > cscope.files
