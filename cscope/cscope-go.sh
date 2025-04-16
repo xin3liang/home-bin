@@ -12,7 +12,8 @@
 #go_pkg_src=$GOROOT/pkg
 #
 #find $go_pkg_src -name "*.go" -print > cscope.files
-find . -name "*.go" -print > cscope.files
+find . -type f \( ! -path "*test.go"  ! -path "*/.git/*" -name "*.go"  \) -print > cscope.files
+#find ~/go/pkg -name "*.go" -print >> cscope.files
 
 if cscope -b -k; then
 echo "Done"
