@@ -58,7 +58,7 @@ mount_juicefs()
 	fi
 	rm -rf $MOUNT_DIR && mkdir -p $MOUNT_DIR
 	cmd="$cmd_head juicefs mount -d $META_DB_URL $MOUNT_DIR --cache-dir=$cache_dir --buffer-size=1024M --max-uploads $cpu_count"
-	echo "eval $cmd"
+	eval $cmd
 	mkdir -p $test_dir
 }
 
