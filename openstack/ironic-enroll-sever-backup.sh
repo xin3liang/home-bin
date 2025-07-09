@@ -1,29 +1,27 @@
 #!/bin/bash -e
 
 # An input file should contains bellow format lines.
-# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> [Target address] <Swtich MAC> <Swtich port> [<Root disk hint> <Root disk hint value>]
+# <Model> <Name> <MAC address> <BMC IP address> <BMC username> <BMC password> [Target address] <Boot option> [<Root disk hint> <Root disk hint value>]
 #
 # Where
 # <Model> is the server production name, e.g.: D05/THX1/THX2
 #
 # <Name> can be 'auto' or a specific name e.g. "racke-d05-01"
 #
-# <MAC address> is the provision NIC interface's MAC.
+# <MAC address> is the provision interface's MAC.
 #
 # [Target address] for multi-node machine, e.g. FX700
 #
-# <Switch MAC> Which swtich the provision NIC interface attach to, Neutron use switch mac address to identify and match the switch.
-#
-# <Switch port> Which swtich port the provision NIC interface attach to.
+# <Boot option> is 'local' for local disk boot or 'netboot' for iscsi volume boot
 #
 # [<Root disk hint> <Root disk hint value>] For specify a local disk to install OS
 # see what hints support here: https://docs.openstack.org/ironic/latest/install/advanced.html#specifying-the-disk-for-deployment-root-device-hints
 # Use lsblk to get related hint, e.g. lsblk -o SERIAL,NAME,SIZE, lsblk -h for more info.
 #
 # Example lines:
-# D05 auto a0:a3:3b:c1:41:b9 172.27.64.50 user password 3c:15:fb:3b:02:f4 GE1/0/17
-# THX2 rack3-thx1-02 a0:a3:3b:c1:41:b9 172.27.64.51 user password 04:b0:e7:fa:2f:94 10GE1/0/13 serial 160811E5163F
-# FX700 rack4-fx700-node2 2C:D4:44:CE:90:A2 172.27.64.160 user password 0x34 3c:15:fb:3b:03:14 GE1/0/20
+# D05 auto a0:a3:3b:c1:41:b9 172.27.64.50 root Huawei12#$ netboot
+# THX1 rack3-thx1-02 a0:a3:3b:c1:41:b9 172.27.64.51 root Huawei12#$ local serial 160811E5163F
+# FX700 rack4-fx700-node2 2C:D4:44:CE:90:A2 172.27.64.160 hpcmainte HPCMAINTE 0x34 netboot
 
 
 RAM_MB=32768 #default RAM 32G
@@ -91,7 +89,6 @@ echo "Check BMC connectivity finish."
 
 echo "Enroll server..."
 while read server_info; do
-    ## Parse options
     model=$(echo $server_info|awk '{print $1}')
     name=$(echo $server_info|awk '{print $2}')
     mac_addr=$(echo $server_info|awk '{print $3}')
@@ -116,30 +113,36 @@ while read server_info; do
 
     fi
 
-    switch_mac=$(echo $server_info|awk -v i=$i '{print $(7+i)}')
-    switch_port=$(echo $server_info|awk -v i=$i '{print $(8+i)}')
-    root_disk_hint=$(echo $server_info|awk -v i=$i '{print $(9+i)}')
-    root_disk_hint_value=$(echo $server_info|awk -v i=$i '{print $(10+i)}')
+    boot_option=$(echo $server_info|awk -v i=$i '{print $(7+i)}')
+    root_disk_hint=$(echo $server_info|awk -v i=$i '{print $(8+i)}')
+    root_disk_hint_value=$(echo $server_info|awk -v i=$i '{print $(9+i)}')
 
     if [[ "$name" == "auto" ]]; then
         node_name=${model,,}-$(printf "%02d" $server_count)
     else
         node_name=$name
     fi
-
-    if [[ -n $root_disk_hint ]]; then
-	node_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
-    fi
+    cpus=$(get_cpus $model)
 
     # if flavor not existed, 
     # then create it
-    flavor_name=bm.${model,,}
-    flavor=$(openstack flavor list --all|grep $flavor_name) || true
+    flavor_name_prefix=bm.${model,,}
+    flavor=$(openstack flavor list --all|grep -i $flavor_name_prefix) || true
     if [[ -z $flavor ]]; then
         resource_class=CUSTOM_${RESOURCE_CLASS^^}_${model^^}
+	volume_boot_flavor_name=${flavor_name_prefix}.volume-boot
+	local_boot_flavor_name=${flavor_name_prefix}.local-boot
         openstack flavor create --ram 1 --vcpus 1 --project $OS_PROJECT_NAME \
-            --disk $DISK_GB --private $flavor_name
-        openstack flavor set $flavor_name \
+            --disk $DISK_GB --private $volume_boot_flavor_name
+        openstack flavor set $volume_boot_flavor_name \
+            --property resources:$resource_class=1 \
+            --property resources:VCPU=0 \
+            --property resources:MEMORY_MB=0 \
+            --property resources:DISK_GB=0 \
+            --property capabilities:boot_option='netboot'
+        openstack flavor create --ram 1 --vcpus 1 --project $OS_PROJECT_NAME \
+            --disk $DISK_GB --private $local_boot_flavor_name
+        openstack flavor set $local_boot_flavor_name \
             --property resources:$resource_class=1 \
             --property resources:VCPU=0 \
             --property resources:MEMORY_MB=0 \
@@ -147,12 +150,16 @@ while read server_info; do
             --property capabilities:boot_option='local'
     fi
 
-    ## create baremetal node
-    deploy_kernel_id=$(openstack image show bm-deploy-kernel -f value -c id)
-    deploy_initrd_id=$(openstack image show bm-deploy-initrd -f value -c id)
+    deploy_kernel_id=$(openstack image show bm-deploy-kernel \
+                        -f value -c id)
+    deploy_initrd_id=$(openstack image show bm-deploy-initrd \
+                        -f value -c id)
     resource_class=${RESOURCE_CLASS,,}-${model,,}
-    cap_prop="boot_mode:uefi,boot_option:local"
-    cpus=$(get_cpus $model)
+
+    cap_prop="boot_mode:uefi,boot_option:$boot_option"
+
+    # Note: Set capabilities=boot_option:local if it has disk for local disk boot
+    # and only one boot_option could be set once time.
     node_id=$(openstack baremetal node create \
         --name $node_name \
         --driver-info ipmi_username=$bmc_user \
@@ -166,17 +173,36 @@ while read server_info; do
         --property memory_mb=$RAM_MB \
         --property capabilities=$cap_prop \
         --deploy-interface iscsi \
-	--network-interface neutron \
         -f value -c uuid $node_opts)
     
-    # Add switch port info
-    openstack baremetal port create $mac_addr \
-	    --node $node_id \
-	    --physical-network physnet1 \
-	    --local-link-connection switch_id=$switch_mac \
-	    --local-link-connection port_id=$switch_port
+    openstack baremetal port create $mac_addr --node $node_id --physical-network physnet1
 
-    # make it as available state
+    node_extra_opts=""
+    if [[ "$boot_option" == "netboot" ]];then
+	    cap_prop+=",iscsi_boot:True"
+        node_extra_opts+=" \
+            --network-interface flat \
+            --storage-interface cinder \
+            --property capabilities=$cap_prop"
+        # create initiator
+        connector_iqn="iqn.2017-05.org.openstack:node-$node_name"
+        openstack baremetal volume connector create \
+            --node $node_id --type iqn \
+            --connector-id $connector_iqn
+    elif [[ "$boot_option" == "local" ]];then
+        node_extra_opts+=" \
+            --network-interface flat"
+        if [[ -n $root_disk_hint ]]; then
+            node_extra_opts+=" --property root_device={\"$root_disk_hint\":\"$root_disk_hint_value\"}"
+        fi
+        # TODO: Add port local-link-connection
+        #echo "Please add local-link-connection for node $node_name manually!!"
+    else
+        echo "Wrong boot_option: $boot_option!! Deleting node $node_name. "
+        openstack baremetal node delete  $node_id
+    fi
+
+    openstack baremetal node set $node_id $node_extra_opts
     openstack baremetal node manage $node_id
     openstack baremetal node provide $node_id
 
