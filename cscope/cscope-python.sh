@@ -1,17 +1,9 @@
-#!/bin/bash
+#!/bin/bash -e
 
-cd `pwd`
+## Usage: cscope-py.sh [dir1,dir2,dir3...]
+. common.sh
+cscope_cmd="pycscope"
+file_filter='\( ! -path "*test*" ! -path "*/.tox/*" ! -path "*/.git/*" -name "*.py" \)'
 
-set -x
-
-DIR=.
-
-if [ -n "$1" ] ;then
-	DIR=$1
-fi
-
-find -L $(pwd)/$DIR -type f \( ! -path "*test*" ! -path "*/.tox/*" ! -path "*/.git/*" -name "*.py"  \) > pycscope.files
-pycscope -i pycscope.files
-rm -f pycscope.files
-set +x
-
+find_src_files
+parse_src_files

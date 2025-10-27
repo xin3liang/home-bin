@@ -1,20 +1,12 @@
-#!/bin/bash
+#!/bin/bash -e
 
-cd `pwd`
-
-set -x
-
-DIR=.
-
-if [ -n "$1" ] ;then
-	DIR=$1
-fi
+## Usage: cscope-rs.sh [dir1,dir2,dir3...]
+. common.sh
+cscope_cmd="pycscope"
+file_filter='\( ! -path "*test*" ! -path "*/.tox/*" ! -path "*/.git/*" -name "*.py" \)'
 
 rusty-tags -v vi
-ctags -R $DIR
+find_src_files
+parse_src_files
 
-find . -name "*.rs" -print > cscope.files
-cscope -bkq -i cscope.files
-rm -f cscope.files
-set +x
 
